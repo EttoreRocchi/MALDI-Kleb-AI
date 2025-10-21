@@ -1,0 +1,12 @@
+numpy
+pandas
+scipy
+scikit-learn
+xgboost
+matplotlib
+seaborn
+shap
+umap-learn
+combatlearn
+tqdm
+maldiamrkit
