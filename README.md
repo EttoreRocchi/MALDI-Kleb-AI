@@ -4,6 +4,8 @@
 
 This repository contains a comprehensive machine learning pipeline for predicting antimicrobial resistance (AMR) phenotypes from MALDI-TOF mass spectrometry data across multiple collection sites. Data used within this pipeline are MALDI-TOF spectra of *Klebsiella pneumoniae* and were collected in 3 Italian clinical centres. The framework implements cross-dataset evaluation strategies and batch effect correction methods to assess model generalizability and site-specific performance.
 
+The MALDI-TOF spectra are processed using [MaldiAMRKit](https://github.com/EttoreRocchi/MaldiAMRKit). The batch-effect correction is performed with [combatlearn](https://github.com/EttoreRocchi/combatlearn) to avoid data leakage in the machine learning pipeline.
+
 ## Structure
 
 ```
@@ -159,7 +161,7 @@ results/batches/
 
 ## Citation
 
-The dataset is publicly available on Zenodo at: [MALDI-Kleb-AI]()
+The dataset is publicly available on Zenodo at: [MALDI-Kleb-AI](https://zenodo.org/records/17405072).
 
 If you use the dataset and/or the pipeline, please consider citing:
 
