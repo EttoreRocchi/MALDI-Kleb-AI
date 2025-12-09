@@ -140,15 +140,19 @@ results/aggregated_datasets/
 
 ### Batch effect visualization
 
-Visualize batch effects before and after ComBat correction using dimensionality reduction.
+Visualize and quantify batch effects before and after ComBat correction using dimensionality reduction and statistical metrics.
 
 **Command:**
 ```bash
-python src/batch_visualization.py \
+python src/batch_analyses.py \
     --data ./data/dfs/data_bin_3.csv \
     --batches ./data/dfs/metadata_bin_3.csv \
-    --out ./results/batches
+    --out ./results/batches \
+    [--per-batch]
 ```
+
+**Options:**
+- `--per-batch`: Enable per-batch diagnostics (computes metrics for each batch individually)
 
 **Outputs:**
 ```
@@ -156,8 +160,15 @@ results/batches/
 ├── pca_comparison.png                    # Side-by-side PCA (before/after)
 ├── pca_comparison.pdf
 ├── umap_comparison.png                   # Side-by-side UMAP (before/after)
-└── umap_comparison.pdf
+├── umap_comparison.pdf
+└── batch_correction_report.md            # Quantitative assessment
 ```
+
+**Metrics computed:**
+- **Batch Effect Removal**: Centroid distances, variance alignment (Levene's test), batch separability (Silhouette score)
+- **Structure Preservation**: k-NN neighborhood preservation, distance correlation
+- **Distribution Preservation**: Skewness changes, Kolmogorov-Smirnov statistics
+- **Per-Batch Diagnostics** (optional): Alignment, structure preservation, and distribution similarity within each batch
 
 ## Citation
 
