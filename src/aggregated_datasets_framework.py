@@ -55,6 +55,7 @@ warnings.filterwarnings("ignore")
 SEED = 42
 N_SPLITS_OUTER = 10
 N_SPLITS_INNER = 5
+N_BOOTSTRAP = 10_000
 DPI = 300
 FIGSIZE_STANDARD = (8, 6)
 FIGSIZE_SQUARE = (6, 6)
@@ -116,8 +117,46 @@ def save_figure(fig, path: Path, formats=['png', 'pdf'], dpi=DPI):
         save_path = f"{base_path}.{fmt}"
         fig.savefig(save_path, dpi=dpi, bbox_inches='tight', format=fmt)
         if fmt == 'pdf':
-            fig.savefig(save_path, dpi=dpi, bbox_inches='tight', 
+            fig.savefig(save_path, dpi=dpi, bbox_inches='tight',
                        format=fmt, backend='pdf')
+
+
+def bootstrap_ci(data: np.ndarray, n_bootstrap: int = N_BOOTSTRAP,
+                 ci_percentile: float = 95, seed: int = SEED) -> tuple[float, float]:
+    """
+    Calculate nonparametric bootstrap confidence interval for the mean.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        1D array of observed values
+    n_bootstrap : int
+        Number of bootstrap resamples (default: 10,000)
+    ci_percentile : float
+        Confidence interval percentile (default: 95 for 95% CI)
+    seed : int
+        Random seed for reproducibility
+
+    Returns
+    -------
+    tuple[float, float]
+        Lower and upper bounds of the confidence interval
+    """
+    rng = np.random.RandomState(seed)
+    n = len(data)
+
+    # Generate bootstrap resamples and compute means
+    bootstrap_means = np.array([
+        np.mean(rng.choice(data, size=n, replace=True))
+        for _ in range(n_bootstrap)
+    ])
+
+    # Calculate percentiles for CI
+    alpha = (100 - ci_percentile) / 2
+    lower = np.percentile(bootstrap_means, alpha)
+    upper = np.percentile(bootstrap_means, 100 - alpha)
+
+    return lower, upper
 
 
 def metric_dict(y_true, y_pred, y_prob):
@@ -456,16 +495,26 @@ def crossval_pipeline(
             df_metrics = pd.DataFrame(fold_metrics)
             mean = df_metrics.mean()
             std = df_metrics.std()
-            ci = 2.262 * std / np.sqrt(N_SPLITS_OUTER)  # 95% CI, df = 9
+
+            # Calculate bootstrap 95% CI for each metric
+            ci_lower = []
+            ci_upper = []
+            for col in df_metrics.columns:
+                lower, upper = bootstrap_ci(df_metrics[col].values)
+                ci_lower.append(lower)
+                ci_upper.append(upper)
+
             summary_data = {
                 'Metric': df_metrics.columns,
                 'Mean': mean.values,
                 'Std': std.values,
-                'CI_95': ci.values,
-                'Mean±CI': [f"{m:.3f} ± {c:.3f}" for m, c in zip(mean, ci)]
+                'CI_Lower': ci_lower,
+                'CI_Upper': ci_upper,
+                'Mean [95% CI]': [f"{m:.3f} [{l:.3f}, {u:.3f}]"
+                                  for m, l, u in zip(mean, ci_lower, ci_upper)]
             }
             summary_df = pd.DataFrame(summary_data)
-            
+
             # Save detailed metrics
             summary_df.to_csv(out_dir / f"metrics_detailed_{model_name.replace(' ', '_')}_{tgt}.csv", index=False)
 
@@ -490,9 +539,15 @@ def crossval_pipeline(
         for model_name, fold_metrics in metrics_all.items():
             df_metrics = pd.DataFrame(fold_metrics)
             mean = df_metrics.mean()
-            ci = 2.262 * df_metrics.std() / np.sqrt(N_SPLITS_OUTER)
-            all_summaries[model_name] = [f"{m:.3f} ± {c:.3f}" for m, c in zip(mean, ci)]
-        
+
+            # Calculate bootstrap 95% CI for each metric
+            ci_formatted = []
+            for col in df_metrics.columns:
+                lower, upper = bootstrap_ci(df_metrics[col].values)
+                ci_formatted.append(f"{mean[col]:.3f} [{lower:.3f}, {upper:.3f}]")
+
+            all_summaries[model_name] = ci_formatted
+
         metrics_df = pd.DataFrame(all_summaries, index=df_metrics.columns).T
         metrics_df.to_csv(out_dir / f"metrics_{tgt}.csv")
         
